@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneX Clip - Movie Recap</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7c3aed;
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --text-light: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #374151;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 250px; background-color: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .logo { padding: 20px; font-size: 20px; font-weight: bold; color: var(--primary); border-bottom: 1px solid var(--border); }
+        .menu-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 15px; color: var(--text-muted); transition: 0.3s; }
+        .menu-item:hover, .menu-item.active { background-color: rgba(124, 58, 237, 0.1); color: var(--primary); border-left: 4px solid var(--primary); }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .header { padding: 15px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        
+        .view-section { display: none; padding: 20px; }
+        .view-section.active { display: block; }
+
+        /* Upload Area */
+        .upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 40px; text-align: center; margin-bottom: 20px; cursor: pointer; transition: 0.3s; }
+        .upload-area:hover { border-color: var(--primary); background-color: rgba(124, 58, 237, 0.05); }
+        .upload-area i { font-size: 40px; color: var(--primary); margin-bottom: 15px; }
+        .link-input { display: flex; gap: 10px; margin-bottom: 20px; }
+        .link-input input { flex: 1; padding: 12px; background: var(--bg-panel); border: 1px solid var(--border); color: white; border-radius: 8px; outline: none; }
+        .btn { padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn:hover { opacity: 0.8; }
+
+        /* Editor Layout */
+        .editor-container { display: flex; gap: 20px; height: calc(100vh - 120px); }
+        .video-preview { flex: 1; background: #000; border-radius: 10px; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+        .video-preview img { max-height: 100%; max-width: 100%; object-fit: contain; transition: transform 0.3s; }
+        
+        /* Simulated Subtitle over video */
+        .subtitle-overlay { position: absolute; bottom: 10%; background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 5px; font-size: 18px; font-weight: bold; text-align: center; }
+
+        .tools-panel { width: 350px; background: var(--bg-panel); border-radius: 10px; display: flex; flex-direction: column; }
+        .tabs { display: flex; overflow-x: auto; border-bottom: 1px solid var(--border); }
+        .tab { padding: 12px 15px; cursor: pointer; color: var(--text-muted); white-space: nowrap; }
+        .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .tab-content { padding: 15px; display: none; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .tab-content.active { display: flex; }
+
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .control-group label { font-size: 14px; color: var(--text-muted); }
+        .control-group input[type="range"] { width: 100%; accent-color: var(--primary); }
+        .control-group select { padding: 8px; background: var(--bg-dark); color: white; border: 1px solid var(--border); border-radius: 5px; }
+        
+        /* Action Button */
+        .action-area { padding: 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+        .btn-start { width: 100%; padding: 15px; font-size: 16px; background: linear-gradient(to right, #7c3aed, #db2777); }
+        
+        /* Progress Bar */
+        .progress-container { display: none; width: 100%; background: var(--bg-dark); border-radius: 5px; overflow: hidden; height: 20px; }
+        .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; text-align: center; font-size: 12px; line-height: 20px; }
+
+        /* Settings */
+        .settings-group { margin-bottom: 20px; }
+        .settings-group input { width: 100%; padding: 10px; margin-top: 5px; background: var(--bg-panel); border: 1px solid var(--border); color: white; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo"><i class="fas fa-video"></i> OneX Clip</div>
+        <div class="menu-item active" onclick="switchView('dashboard')"><i class="fas fa-magic"></i> Recap လုပ်မည်</div>
+        <div class="menu-item" onclick="switchView('history')"><i class="fas fa-history"></i> History</div>
+        <div class="menu-item" onclick="switchView('settings')"><i class="fas fa-cog"></i> Setting</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h2>Welcome back, Wai! 👋</h2>
+            <div>Credits: 14732</div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard" class="view-section active">
+            
+            <!-- Upload Section -->
+            <div id="upload-section">
+                <div class="upload-area" onclick="document.getElementById('videoFile').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>Video ဖိုင် ရွေးပါ</h3>
+                    <p>MP4, MOV, MKV (၁၅ မိနစ်အထိ)</p>
+                    <input type="file" id="videoFile" style="display: none;" accept="video/*" onchange="fileSelected(this)">
+                </div>
+                
+                <div style="text-align: center; margin: 10px 0; color: var(--text-muted);">သို့မဟုတ် Link ထည့်ပါ</div>
+                
+                <div class="link-input">
+                    <input type="text" id="videoLink" placeholder="TikTok / YouTube link ထည့်ပါ">
+                    <button class="btn" onclick="linkSelected()"><i class="fas fa-paste"></i> ထည့်မည်</button>
+                </div>
+            </div>
+
+            <!-- Editor Section (Hidden initially) -->
+            <div id="editor-section" class="editor-container" style="display: none;">
+                <!-- Video Preview -->
+                <div class="video-preview">
+                    <!-- Placeholder Video (You can replace with actual video tag) -->
+                    <img id="previewImg" src="https://via.placeholder.com/400x600.png?text=Video+Preview" alt="Video">
+                    <div class="subtitle-overlay" id="subtitlePreview">he was pooping so hard</div>
+                </div>
+
+                <!-- Tools Panel -->
+                <div class="tools-panel">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('tab-video')">ဗီဒီယို</div>
+                        <div class="tab" onclick="switchTab('tab-blur')">Blur</div>
+                        <div class="tab" onclick="switchTab('tab-subtitle')">စာတန်း</div>
+                        <div class="tab" onclick="switchTab('tab-color')">အရောင်</div>
+                        <div class="tab" onclick="switchTab('tab-audio')">အသံ</div>
+                    </div>
+
+                    <!-- Video Tab -->
+                    <div id="tab-video" class="tab-content active">
+                        <div class="control-group">
+                            <label>Video Size အစုံရွေး</label>
+                            <select><option>9:16 (TikTok)</option><option>16:9 (YouTube)</option><option>1:1 (Square)</option></select>
+                        </div>
+                        <div class="control-group">
+                            <label>Video Quality</label>
+                            <select><option>1080P</option><option>720P</option></select>
+                        </div>
+                        <div class="control-group">
+                            <label>Video Zoom</label>
+                            <input type="range" min="100" max="300" value="100" oninput="zoomVideo(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Blur Tab -->
+                    <div id="tab-blur" class="tab-content">
+                        <div class="control-group">
+                            <label>မူရင်းစာတန်း Blur ခလုတ်</label>
+                            <input type="checkbox" checked> အရှိန်မြှင့်: <input type="range" min="1" max="10" value="5">
+                        </div>
+                        <div class="control-group">
+                            <label>နောက်ခံ blur ပုံ (CapCut ကလိုမျိုး)</label>
+                            <input type="checkbox"> အရှိန်မြှင့်: <input type="range" min="1" max="20" value="10">
+                        </div>
+                        <div class="control-group">
+                            <label>Video ဘယ်ညာလှန်</label>
+                            <button class="btn" style="background: #374151;" onclick="flipVideo()"><i class="fas fa-exchange-alt"></i> လှန်မည်</button>
+                        </div>
+                    </div>
+
+                    <!-- Subtitle Tab -->
+                    <div id="tab-subtitle" class="tab-content">
+                        <div class="control-group">
+                            <label>စာတန်းထိုး (Line 1 / Line 2)</label>
+                            <select><option>Line 1</option><option>Line 1 + Line 2</option></select>
+                        </div>
+                        <div class="control-group">
+                            <label>Font Size</label>
+                            <input type="range" min="10" max="40" value="18" oninput="document.getElementById('subtitlePreview').style.fontSize = this.value + 'px'">
+                        </div>
+                        <div class="control-group">
+                            <label>Font ရွေးချယ်ရန် (5 မျိုး)</label>
+                            <select><option>Pyidaungsu</option><option>Myanmar Sans Pro</option><option>Zawgyi-One</option><option>Arial</option><option>Impact</option></select>
+                        </div>
+                        <div class="control-group">
+                            <label>စာတန်းအရောင်</label>
+                            <input type="color" value="#ffffff" onchange="document.getElementById('subtitlePreview').style.color = this.value">
+                        </div>
+                        <div class="control-group">
+                            <label>စာတန်းအောက်ခံ (Background)</label>
+                            <input type="checkbox" checked onchange="document.getElementById('subtitlePreview').style.background = this.checked ? 'rgba(0,0,0,0.7)' : 'transparent'">
+                            အရောင်: <input type="color" value="#000000" onchange="document.getElementById('subtitlePreview').style.background = this.value">
+                        </div>
+                    </div>
+
+                    <!-- Color Tab -->
+                    <div id="tab-color" class="tab-content">
+                        <label>Video အရောင်ချိန်တဲ့ဟာ</label>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn" style="background: #555;">မူရင်း</button>
+                            <button class="btn" style="background: #3b82f6;">အအေး</button>
+                            <button class="btn" style="background: #ef4444;">အပူ</button>
+                            <button class="btn" style="background: #10b981;">Vintage</button>
+                            <button class="btn" style="background: #000;">B&W</button>
+                        </div>
+                    </div>
+
+                    <!-- Audio Tab -->
+                    <div id="tab-audio" class="tab-content">
+                        <div class="control-group">
+                            <label>အသံရွေးချယ်ရန် (Edge TTS)</label>
+                            <select><option>Edge Thiha (သီဟ)</option><option>Edge Nilar (နီလာ)</option></select>
+                        </div>
+                        <div class="control-group">
+                            <label>အနိမ့်အမြင့် (Pitch)</label>
+                            <input type="range" min="-20" max="20" value="0">
+                        </div>
+                        <div class="control-group">
+                            <label>အမြန်နှုန်း (Speed)</label>
+                            <input type="range" min="0.5" max="2" step="0.1" value="1">
+                        </div>
+                        <button class="btn" style="background: #374151;" onclick="alert('မင်္ဂလာပါ OneX Clipကနေကြိုဆိုပါတယ်')"><i class="fas fa-play"></i> စမ်းနားထောင်ရန်</button>
+                    </div>
+
+                    <!-- Action & Progress -->
+                    <div class="action-area">
+                        <button class="btn btn-start" id="startBtn" onclick="startProcessing()">စတင်မည်</button>
+                        <div class="progress-container" id="progressContainer">
+                            <div class="progress-bar" id="progressBar">0%</div>
+                        </div>
+                        <button class="btn" id="downloadBtn" style="display: none; background: #10b981;" onclick="alert('MP4 Download စတင်ပါပြီ')"><i class="fas fa-download"></i> MP4 ဒေါင်းမည်</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- History View -->
+        <div id="history" class="view-section">
+            <h2>History</h2>
+            <p style="margin-top:20px; color: var(--text-muted);">သင် လုပ်ပြီးသော Video များ ဒီနေရာမှာ ပေါ်လာပါမည်။</p>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settings" class="view-section">
+            <h2>Setting - API Keys</h2>
+            <div class="settings-group" style="margin-top: 20px;">
+                <label>AssemblyAI API Key (မူရင်းစာထုတ်ရန်)</label>
+                <input type="password" placeholder="Enter AssemblyAI Key">
+            </div>
+            <div class="settings-group">
+                <label>Google AI Studio Key (ဘာသာပြန်ရန်)</label>
+                <input type="password" placeholder="Enter Google AI Key">
+            </div>
+            <button class="btn" onclick="alert('API Keys Saved!')">Save</button>
+        </div>
+
+    </div>
+
+    <script>
+        // Navigation Logic
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(viewId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // Tab Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // Upload Simulation
+        function fileSelected(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('upload-section').style.display = 'none';
+                document.getElementById('editor-section').style.display = 'flex';
+                alert("Video တင်ပြီးပါပြီ။ ဖြတ်တောက်ခြင်းကို စတင်နိုင်ပါပြီ။");
+            }
+        }
+
+        function linkSelected() {
+            let link = document.getElementById('videoLink').value;
+            if(link) {
+                document.getElementById('upload-section').style.display = 'none';
+                document.getElementById('editor-section').style.display = 'flex';
+                alert("Link မှ Video ကို ဆွဲယူနေသည်... (Backend လိုအပ်ပါသည်)");
+            } else {
+                alert("Link အရင်ထည့်ပါ");
+            }
+        }
+
+        // Video Controls Simulation
+        let currentZoom = 100;
+        function zoomVideo(val) {
+            currentZoom = val;
+            document.getElementById('previewImg').style.transform = `scale(${val/100})`;
+        }
+
+        let isFlipped = false;
+        function flipVideo() {
+            isFlipped = !isFlipped;
+            document.getElementById('previewImg').style.transform = isFlipped ? 'scaleX(-1)' : 'scaleX(1)';
+        }
+
+        // Processing Simulation
+        function startProcessing() {
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            let progress = 0;
+            let interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 10) + 5;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    document.getElementById('progressBar').innerText = "အမှန်ခြစ် ✓ 100%";
+                    document.getElementById('progressBar').style.background = "#10b981";
+                    document.getElementById('downloadBtn').style.display = 'block';
+                } else {
+                    document.getElementById('progressBar').style.width = progress + '%';
+                    document.getElementById('progressBar').innerText = progress + '%';
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html>
